@@ -271,7 +271,7 @@ function SettingsPage() {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  }, [settingsActions, refreshRecordCounts]);
+  }, [complementMode, settingsActions, refreshRecordCounts]);
 
   const handleServerImport = useCallback(async () => {
     const uuid = serverUuidInput.trim();
@@ -701,7 +701,6 @@ function SettingsPage() {
             <a href="https://admindata.atmo-france.org" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline dark:text-indigo-400">
               admindata.atmo-france.org
             </a>.
-            Le code INSEE de votre commune peut être trouvé sur insee.fr.
           </p>
         </div>
       </Card>
@@ -767,7 +766,8 @@ function SettingsPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Les données sont stockées localement dans votre navigateur (IndexedDB).
             L'export JSON permet de les télécharger. L'import JSON permet de les
-            restaurer depuis un fichier (remplace les données actuelles).
+            restaurer depuis un fichier. Par défaut, il remplace les données actuelles ;
+            cochez « Complément » pour conserver les données existantes et ajouter celles du fichier.
           </p>
         </div>
       </Card>
