@@ -701,7 +701,6 @@ function SettingsPage() {
             <a href="https://admindata.atmo-france.org" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline dark:text-indigo-400">
               admindata.atmo-france.org
             </a>.
-            Le code INSEE de votre commune peut être trouvé sur insee.fr.
           </p>
         </div>
       </Card>
