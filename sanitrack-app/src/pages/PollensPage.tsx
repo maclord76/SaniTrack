@@ -64,6 +64,14 @@ function formatDisplayDateTime(value?: string | null): string {
   }).format(date);
 }
 
+function formatDayLabel(value?: string | null): string {
+  if (!value) return 'Bulletin disponible';
+  const date = new Date(`${value.substring(0, 10)}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return 'Bulletin disponible';
+  const label = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' }).format(date);
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 function formatConcentration(value?: number | null): string {
   if (value === null || value === undefined || Number.isNaN(value)) return 'Non renseignee';
   return new Intl.NumberFormat('fr-FR', {
@@ -120,16 +128,24 @@ function PollensPage() {
   const hasCredentials = Boolean(atmoLogin && atmoPassword && atmoLocation);
   const pollenDays = useMemo(() => {
     if (!data) return [];
-    return [
+    const days = [
       { label: "Aujourd'hui", day: data.today },
       { label: 'Demain', day: data.tomorrow },
       { label: 'Apres-demain', day: data.afterTomorrow },
-    ].filter(
+    ];
+    return days.filter(
       (item): item is { label: string; day: PollenDayData } =>
         Boolean(item.day && (item.day.zone || item.day.pollen.length > 0)),
-    );
+    ).map((item) => ({
+      ...item,
+      label: data.is_stale
+        ? formatDayLabel(item.day.zone?.date_ech || item.day.zone?.date)
+        : item.label,
+    }));
   }, [data]);
   const hasAnyPollenData = pollenDays.some((item) => item.day.pollen.length > 0);
+  const availableDates = data?.available_dates ?? [];
+  const latestAvailableDate = availableDates.length > 0 ? availableDates[availableDates.length - 1] : undefined;
   const sensitivityRecords = useMemo(() => {
     return Object.values(allergenProfiles).sort((a, b) => a.name.localeCompare(b.name, 'fr'));
   }, [allergenProfiles]);
@@ -168,6 +184,7 @@ function PollensPage() {
 
   const handleFeedback = useCallback(
     async (nextStatus: 'like' | 'dislike') => {
+      if (data?.is_stale) return;
       const todayPollens = data?.today?.pollen ?? [];
       if (todayPollens.length === 0) return;
 
@@ -331,6 +348,12 @@ function PollensPage() {
         </Button>
       </div>
 
+      {data?.is_stale && latestAvailableDate && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-100">
+          Atmo France n'a pas encore publie les donnees du jour. Dernier bulletin disponible : {formatDisplayDate(latestAvailableDate)}.
+        </div>
+      )}
+
       {/* Infos communes (ville + code INSEE) + carte Moi */}
       {(() => {
         const zone = data && data.today && data.today.zone;
@@ -369,6 +392,7 @@ function PollensPage() {
                   <Button
                     variant={likeStatus === 'like' ? 'primary' : 'secondary'}
                     onClick={() => void handleFeedback('like')}
+                    disabled={data?.is_stale}
                     className="flex items-center gap-2"
                   >
                     <svg
@@ -386,6 +410,7 @@ function PollensPage() {
                   <Button
                     variant={likeStatus === 'dislike' ? 'danger' : 'secondary'}
                     onClick={() => void handleFeedback('dislike')}
+                    disabled={data?.is_stale}
                     className="flex items-center gap-2"
                   >
                     <svg
@@ -400,6 +425,12 @@ function PollensPage() {
                     <span>Pouce en bas</span>
                   </Button>
                 </div>
+
+                {data?.is_stale && (
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    Le ressenti est desactive tant que les donnees du jour ne sont pas disponibles.
+                  </p>
+                )}
 
                 {/* Scores de graines des allergènes */}
                 {todayPollens.length > 0 && (
@@ -480,7 +511,7 @@ function PollensPage() {
           <Card title="Indices polliniques" subtitle="Aucune donnee">
             <EmptyState
               message="Aucune donnee pollinique disponible"
-              description="L'API Atmo France n'a pas renvoye de donnees pour cette commune sur la periode J a J+2."
+              description="L'API Atmo France n'a renvoye aucun bulletin pour cette commune sur les 7 derniers jours."
             />
           </Card>
         );

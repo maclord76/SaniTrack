@@ -1,14 +1,38 @@
 import { z } from 'zod';
+import {
+  convertBloodAnalysisValueForDisplay,
+  type BloodAnalysisConcentrationField,
+  type BloodAnalysisUnit,
+} from '../utils/blood-analysis-units';
 
-export const bloodAnalysisFormSchema = z.object({
-  date: z.string().min(1, 'La date est requise'),
-  tc: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(15, 'Maximum 15 mmol/L'),
-  hdl: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(5, 'Maximum 5 mmol/L'),
-  tg: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(20, 'Maximum 20 mmol/L'),
-  ldl: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(12, 'Maximum 12 mmol/L'),
-  tcHdlRatio: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(25, 'Maximum 25'),
-  glucose: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(40, 'Maximum 40 mmol/L'),
-});
+const bloodAnalysisMaximums: Record<BloodAnalysisConcentrationField, number> = {
+  tc: 15,
+  hdl: 5,
+  tg: 20,
+  ldl: 12,
+  glucose: 40,
+};
+
+function bloodAnalysisValueSchema(field: BloodAnalysisConcentrationField, unit: BloodAnalysisUnit) {
+  const maximum = convertBloodAnalysisValueForDisplay(field, bloodAnalysisMaximums[field], unit);
+  return z.number({ required_error: 'Requis' })
+    .min(0, 'Doit être positif')
+    .max(maximum, `Maximum ${maximum} ${unit}`);
+}
+
+export function createBloodAnalysisFormSchema(unit: BloodAnalysisUnit) {
+  return z.object({
+    date: z.string().min(1, 'La date est requise'),
+    tc: bloodAnalysisValueSchema('tc', unit),
+    hdl: bloodAnalysisValueSchema('hdl', unit),
+    tg: bloodAnalysisValueSchema('tg', unit),
+    ldl: bloodAnalysisValueSchema('ldl', unit),
+    tcHdlRatio: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(25, 'Maximum 25'),
+    glucose: bloodAnalysisValueSchema('glucose', unit),
+  });
+}
+
+export const bloodAnalysisFormSchema = createBloodAnalysisFormSchema('mmol/L');
 
 export const physicalActivityFormSchema = z.object({
   date: z.string().min(1, 'La date est requise'),

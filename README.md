@@ -9,7 +9,7 @@ L'application fonctionne principalement cote navigateur : les donnees sont stock
 - Tableau de bord de synthese
 - Suivi du poids, de la taille et calcul de l'IMC
 - Suivi de la pression arterielle
-- Suivi des analyses sanguines
+- Suivi des analyses sanguines avec saisie et affichage en mmol/L ou mg/dL (stockage normalisé en mmol/L)
 - Suivi du sommeil
 - Suivi de l'activite physique
 - Journal nutritionnel

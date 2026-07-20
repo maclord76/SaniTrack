@@ -406,33 +406,63 @@ async function handleFetchPollen(req, res, urlObj) {
 
     const baseDate = new Date(date + 'T00:00:00');
     const endDate = new Date(baseDate.getTime() + 2 * 86400000).toISOString().split('T')[0];
-    const pollenParams = new URLSearchParams({
-        format: 'geojson',
-        code_zone: codeZone,
-        date: endDate,
-        date_historique: date,
-        with_geom: 'false',
-    });
-    const pollenUrl = `https://${HOST}/api/v2/data/indices/pollens?${pollenParams.toString()}`;
-    const pollenResult = await apiRequest(pollenUrl, 'GET', ['accept: */*'], null, token, ip);
-    if (pollenResult.error) { sendJSON(res, 200, { success: false, error: 'Erreur réseau pollens : ' + pollenResult.error }); return; }
-    if (pollenResult.http_code !== 200) { sendJSON(res, 200, { success: false, error: 'Erreur API Atmo France: HTTP ' + pollenResult.http_code }); return; }
-    let pollenData = null; try { pollenData = JSON.parse(pollenResult.response); } catch { sendJSON(res, 200, { success: false, error: 'Réponse pollens invalide (JSON).' }); return; }
+    async function requestPollen(startDate) {
+        const pollenParams = new URLSearchParams({
+            format: 'geojson',
+            code_zone: codeZone,
+            date: endDate,
+            date_historique: startDate,
+            with_geom: 'false',
+        });
+        const pollenUrl = `https://${HOST}/api/v2/data/indices/pollens?${pollenParams.toString()}`;
+        const result = await apiRequest(pollenUrl, 'GET', ['accept: */*'], null, token, ip);
+        if (result.error) throw new Error('Erreur réseau pollens : ' + result.error);
+        if (result.http_code !== 200) throw new Error('Erreur API Atmo France: HTTP ' + result.http_code);
+        try {
+            return JSON.parse(result.response);
+        } catch {
+            throw new Error('Réponse pollens invalide (JSON).');
+        }
+    }
+
+    let pollenData;
+    try {
+        pollenData = await requestPollen(date);
+    } catch (error) {
+        sendJSON(res, 200, { success: false, error: error.message });
+        return;
+    }
+
+    let fallbackUsed = false;
+    if (!((pollenData && pollenData.features) || []).length) {
+        const fallbackStart = new Date(baseDate.getTime() - 7 * 86400000).toISOString().split('T')[0];
+        try {
+            pollenData = await requestPollen(fallbackStart);
+            fallbackUsed = Boolean(((pollenData && pollenData.features) || []).length);
+        } catch (error) {
+            sendJSON(res, 200, { success: false, error: error.message });
+            return;
+        }
+    }
 
     const features = (pollenData && pollenData.features) || [];
     const dates = [];
     for (const f of features) { const d = (f.properties.date_ech || f.properties.date || '').substring(0, 10); if (d && !dates.includes(d)) dates.push(d); }
     dates.sort();
-    const todayDate = dates[0] || date;
-    const tomorrowDate = dates[1] || null;
-    const afterTomorrowDate = dates[2] || null;
+    const displayDates = dates.slice(-3);
+    const todayDate = displayDates[0] || date;
+    const tomorrowDate = displayDates[1] || null;
+    const afterTomorrowDate = displayDates[2] || null;
     const today = extractDayData(features, todayDate, lat, lon);
     const tomorrow = tomorrowDate ? extractDayData(features, tomorrowDate, lat, lon) : { pollen: [], zone: null };
     const afterTomorrow = afterTomorrowDate ? extractDayData(features, afterTomorrowDate, lat, lon) : { pollen: [], zone: null };
     sendJSON(res, 200, {
         success: true,
         features_count: features.length,
-        available_dates: dates.slice(0, 3),
+        available_dates: displayDates,
+        requested_date: date,
+        fallback_used: fallbackUsed,
+        is_stale: displayDates.length > 0 && displayDates[displayDates.length - 1] < date,
         today,
         tomorrow,
         afterTomorrow,

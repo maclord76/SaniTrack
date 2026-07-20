@@ -3,6 +3,11 @@ import type { DateRange, BloodAnalysis } from '../../models/types';
 import { HealthZone } from '../../models/types';
 import { useBloodAnalysisStore } from '../../stores/blood-analysis-store';
 import { evaluateBloodAnalysis, evaluateField, type BloodAnalysisEvaluation } from '../../engine/rules';
+import {
+  convertBloodAnalysisValueForDisplay,
+  getBloodAnalysisUnit,
+  type BloodAnalysisUnit,
+} from '../../utils/blood-analysis-units';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
@@ -17,7 +22,7 @@ type BloodAnalysisFormData = Omit<BloodAnalysis, 'id' | 'createdAt'>;
 type BloodAnalysisField = 'tc' | 'hdl' | 'tg' | 'ldl' | 'tcHdlRatio' | 'glucose';
 const fields: BloodAnalysisField[] = ['tc', 'hdl', 'tg', 'ldl', 'tcHdlRatio', 'glucose'];
 
-function buildWhoReferenceLines(field: string): ReferenceLineConfig[] {
+function buildWhoReferenceLines(field: BloodAnalysisField, unit: BloodAnalysisUnit): ReferenceLineConfig[] {
   const lines: ReferenceLineConfig[] = [];
   const seen = new Set<number>();
   const thresholdMap: Record<string, { boundaries: { value: number; label: string; color: string }[] }> = {
@@ -52,7 +57,11 @@ function buildWhoReferenceLines(field: string): ReferenceLineConfig[] {
     for (const b of config.boundaries) {
       if (!seen.has(b.value)) {
         seen.add(b.value);
-        lines.push({ value: b.value, label: b.label, color: b.color });
+        lines.push({
+          value: convertBloodAnalysisValueForDisplay(field, b.value, unit),
+          label: b.label,
+          color: b.color,
+        });
       }
     }
   }
@@ -73,21 +82,12 @@ const metricLabels: Record<string, string> = {
 };
 
 const metricIndications: Record<string, string> = {
-  tc: 'Désirable < 5.2',
+  tc: 'Désirable',
   hdl: 'Bon cholestérol',
   tg: 'Mauvaises graisses',
   ldl: 'Mauvais cholestérol',
   tcHdlRatio: 'Risque cardio',
   glucose: 'Glycémie',
-};
-
-const metricUnits: Record<string, string> = {
-  tc: 'mmol/L',
-  hdl: 'mmol/L',
-  tg: 'mmol/L',
-  ldl: 'mmol/L',
-  tcHdlRatio: 'rapport',
-  glucose: 'mmol/L',
 };
 
 const metricColors: Record<string, string> = {
@@ -99,11 +99,6 @@ const metricColors: Record<string, string> = {
   glucose: '#3b82f6',
 };
 
-const metricWhoRefLines: Record<string, ReferenceLineConfig[]> = {};
-for (const field of fields) {
-  metricWhoRefLines[field] = buildWhoReferenceLines(field);
-}
-
 const PAGE_SIZES = [10, 20, 50, 100, 0] as const;
 type PageSize = typeof PAGE_SIZES[number];
 
@@ -114,6 +109,29 @@ const pageSizeLabels: Record<PageSize, string> = {
   100: '100',
   0: 'Tout',
 };
+
+function BloodAnalysisUnitSelector({
+  value,
+  onChange,
+}: {
+  value: BloodAnalysisUnit;
+  onChange: (unit: BloodAnalysisUnit) => void;
+}) {
+  return (
+    <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+      <span className="whitespace-nowrap">Unité :</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value as BloodAnalysisUnit)}
+        className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+        aria-label="Unité d'affichage des analyses sanguines"
+      >
+        <option value="mmol/L">mmol/L</option>
+        <option value="mg/dL">mg/dL</option>
+      </select>
+    </label>
+  );
+}
 
 export function BloodAnalysisDetail() {
   const store = useBloodAnalysisStore();
@@ -130,6 +148,7 @@ export function BloodAnalysisDetail() {
   const [formLoading, setFormLoading] = useState(false);
   const [pageSize, setPageSize] = useState<PageSize>(20);
   const [currentPage, setCurrentPage] = useState(1);
+  const [displayUnit, setDisplayUnit] = useState<BloodAnalysisUnit>('mmol/L');
 
   useEffect(() => {
     actions.fetchAll();
@@ -222,9 +241,12 @@ export function BloodAnalysisDetail() {
   if (records.length === 0) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Analyse sanguine</h2>
-          <Button onClick={() => setShowForm(true)}>+ Ajouter</Button>
+          <div className="flex items-center gap-3">
+            <BloodAnalysisUnitSelector value={displayUnit} onChange={setDisplayUnit} />
+            <Button onClick={() => setShowForm(true)}>+ Ajouter</Button>
+          </div>
         </div>
         <EmptyState message="Aucune analyse sanguine" description="Ajoutez votre première analyse sanguine pour commencer le suivi." />
         <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Ajouter une analyse sanguine">
@@ -238,7 +260,8 @@ export function BloodAnalysisDetail() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Analyse sanguine</h2>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <BloodAnalysisUnitSelector value={displayUnit} onChange={setDisplayUnit} />
           <PeriodSelector value={period} dateRange={dateRange} onChange={handlePeriodChange} />
           <Button onClick={() => setShowForm(true)}>+ Ajouter</Button>
         </div>
@@ -261,13 +284,14 @@ export function BloodAnalysisDetail() {
                 }
                 return fields.map((field) => {
                   const result = evaluateField(field, avgValues[field]);
+                  const displayValue = convertBloodAnalysisValueForDisplay(field, avgValues[field], displayUnit);
                   return (
                     <HealthIndicator
                       key={field}
                       zone={result.zone}
                       label={`${metricLabels[field]} (moy.)`}
-                      value={avgValues[field]}
-                      unit={metricUnits[field]}
+                      value={displayValue}
+                      unit={getBloodAnalysisUnit(field, displayUnit)}
                       zoneLabel={result.label}
                     />
                   );
@@ -284,13 +308,15 @@ export function BloodAnalysisDetail() {
               {fields.map((field) => {
                 const chartData = [...filteredRecords].reverse().map((r) => ({
                   date: new Date(r.date).getTime(),
-                  value: r[field] > 0 ? r[field] : null,
+                  value: r[field] > 0
+                    ? convertBloodAnalysisValueForDisplay(field, r[field], displayUnit)
+                    : null,
                 })).filter((d) => d.value !== null);
                 if (chartData.length === 0) return null;
                 return (
                   <div key={field}>
                     <h4 className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                      {metricLabels[field]} <span className="text-xs text-slate-400">({metricIndications[field]})</span> <span className="text-xs text-slate-400">({metricUnits[field]})</span>
+                      {metricLabels[field]} <span className="text-xs text-slate-400">({metricIndications[field]})</span> <span className="text-xs text-slate-400">({getBloodAnalysisUnit(field, displayUnit)})</span>
                     </h4>
                     <TrendChart
                       data={chartData}
@@ -298,9 +324,9 @@ export function BloodAnalysisDetail() {
                       xKey="date"
                       color={metricColors[field]}
                       label={metricLabels[field]}
-                      unit={metricUnits[field]}
+                      unit={getBloodAnalysisUnit(field, displayUnit)}
                       showAverage
-                      referenceLines={metricWhoRefLines[field]}
+                      referenceLines={buildWhoReferenceLines(field, displayUnit)}
                     />
                   </div>
                 );
@@ -375,10 +401,8 @@ export function BloodAnalysisDetail() {
                                 className={`${isNormal ? 'text-slate-900 dark:text-slate-100' : 'font-semibold'}${!isNormal && result?.color ? ' dynamic-color' : ''}`}
                                 data-color={!isNormal && result?.color ? result.color : undefined}
                               >
-                                {record[field]}
-                                {metricUnits[field] && (
-                                  <span className="ml-1 text-xs text-slate-400"> {metricUnits[field]}</span>
-                                )}
+                                {convertBloodAnalysisValueForDisplay(field, record[field], displayUnit)}
+                                <span className="ml-1 text-xs text-slate-400"> {getBloodAnalysisUnit(field, displayUnit)}</span>
                               </span>
                               {result && (
                                 <span className="ml-1 text-xs opacity-70">({result.label})</span>
