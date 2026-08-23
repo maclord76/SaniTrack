@@ -64,6 +64,8 @@ function restoreSettingsToLocalStorage(settings: SettingsData): void {
   }
   if (settings.thresholds && settings.thresholds.length > 0) {
     localStorage.setItem('settings_thresholds', JSON.stringify(settings.thresholds));
+  } else {
+    localStorage.removeItem('settings_thresholds');
   }
   if (settings.atmoLogin !== undefined) {
     localStorage.setItem('settings_atmo_login', settings.atmoLogin);
@@ -172,6 +174,14 @@ function validateTableEntries<T>(
   return { valid, errors };
 }
 
+function getEntryPrimaryKey(key: ValidatorKey, entry: unknown): string {
+  if (key === 'pollenAllergenScores') {
+    return (entry as PollenAllergenScore).taxon;
+  }
+
+  return (entry as { id: string }).id;
+}
+
 export async function importAllData(
   data: unknown,
   options: { clearExisting?: boolean } = {},
@@ -224,14 +234,14 @@ export async function importAllData(
     errors.push(...result.errors);
   }
 
-  const tables: Record<ValidatorKey, Table<never, string>> = {
-    bloodAnalysis: db.bloodAnalyses as unknown as Table<never, string>,
-    physicalActivity: db.physicalActivities as unknown as Table<never, string>,
-    weightBMI: db.weightBMI as unknown as Table<never, string>,
-    sleep: db.sleep as unknown as Table<never, string>,
-    bloodPressure: db.bloodPressure as unknown as Table<never, string>,
-    nutrition: db.nutrition as unknown as Table<never, string>,
-    pollenAllergenScores: db.pollenAllergenScores as unknown as Table<never, string>,
+  const tables: Record<ValidatorKey, Table<unknown, string>> = {
+    bloodAnalysis: db.bloodAnalyses as unknown as Table<unknown, string>,
+    physicalActivity: db.physicalActivities as unknown as Table<unknown, string>,
+    weightBMI: db.weightBMI as unknown as Table<unknown, string>,
+    sleep: db.sleep as unknown as Table<unknown, string>,
+    bloodPressure: db.bloodPressure as unknown as Table<unknown, string>,
+    nutrition: db.nutrition as unknown as Table<unknown, string>,
+    pollenAllergenScores: db.pollenAllergenScores as unknown as Table<unknown, string>,
   };
 
   let imported = 0;
@@ -257,15 +267,35 @@ export async function importAllData(
       for (const key of tableKeys) {
         const entries = validatedData[key];
         if (entries && entries.length > 0) {
-          await tables[key].bulkAdd(entries as never[]);
-          imported += entries.length;
+          let entriesToAdd = entries as unknown[];
+
+          if (!clearExisting) {
+            const seenKeys = new Set<string>();
+            const uniqueEntries = entriesToAdd.filter((entry) => {
+              const primaryKey = getEntryPrimaryKey(key, entry);
+              if (seenKeys.has(primaryKey)) return false;
+              seenKeys.add(primaryKey);
+              return true;
+            });
+            const existingEntries = await tables[key].bulkGet(
+              uniqueEntries.map((entry) => getEntryPrimaryKey(key, entry)),
+            );
+            entriesToAdd = uniqueEntries.filter(
+              (_entry, index) => existingEntries[index] === undefined,
+            );
+          }
+
+          if (entriesToAdd.length > 0) {
+            await tables[key].bulkAdd(entriesToAdd);
+            imported += entriesToAdd.length;
+          }
         }
       }
     }
   );
 
-  // Restaurer les settings depuis localStorage
-  if (importData.settings) {
+  // En mode complément, conserver les réglages locaux existants.
+  if (importData.settings && clearExisting) {
     restoreSettingsToLocalStorage(importData.settings);
   }
 

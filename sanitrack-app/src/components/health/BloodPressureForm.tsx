@@ -65,9 +65,9 @@ export function BloodPressureForm({ initialData, onSubmit, onCancel, loading = f
     resolver: zodResolver(bloodPressureFormSchema),
     defaultValues: {
       date: toDateInputValue(initialData?.date),
-      systolic: initialData?.systolic ?? 0,
-      diastolic: initialData?.diastolic ?? 0,
-      pulse: initialData?.pulse ?? 0,
+      systolic: initialData?.systolic || undefined,
+      diastolic: initialData?.diastolic || undefined,
+      pulse: initialData?.pulse || undefined,
     },
   });
 
@@ -100,21 +100,21 @@ export function BloodPressureForm({ initialData, onSubmit, onCancel, loading = f
 
         <div className="flex items-end gap-2">
           <div className="flex-1">
-            <Input label="Systolique" error={errors.systolic?.message} type="number" step="1" {...register('systolic', { valueAsNumber: true })} />
+            <Input label="Systolique" error={errors.systolic?.message} type="number" step="1" {...register('systolic', { setValueAs: (value) => value === '' ? undefined : Number(value) })} />
           </div>
           <span className="text-sm text-slate-500 dark:text-slate-400 pb-6">mmHg</span>
         </div>
 
         <div className="flex items-end gap-2">
           <div className="flex-1">
-            <Input label="Diastolique" error={errors.diastolic?.message} type="number" step="1" {...register('diastolic', { valueAsNumber: true })} />
+            <Input label="Diastolique" error={errors.diastolic?.message} type="number" step="1" {...register('diastolic', { setValueAs: (value) => value === '' ? undefined : Number(value) })} />
           </div>
           <span className="text-sm text-slate-500 dark:text-slate-400 pb-6">mmHg</span>
         </div>
 
         <div className="flex items-end gap-2">
           <div className="flex-1">
-            <Input label="Pouls" error={errors.pulse?.message} type="number" step="1" {...register('pulse', { valueAsNumber: true })} />
+            <Input label="Pouls" error={errors.pulse?.message} type="number" step="1" {...register('pulse', { setValueAs: (value) => value === '' ? undefined : Number(value) })} />
           </div>
           <span className="text-sm text-slate-500 dark:text-slate-400 pb-6">bpm</span>
         </div>

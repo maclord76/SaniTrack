@@ -52,6 +52,17 @@ class SanitrackDatabase extends Dexie {
       cachedProducts: 'barcode, name, cachedAt',
       pollenAllergenScores: 'taxon, name, updatedAt',
     });
+
+    this.version(4).stores({
+      bloodAnalyses: 'id, date, createdAt',
+      physicalActivities: 'id, date, createdAt',
+      weightBMI: 'id, date, createdAt',
+      sleep: 'id, date, createdAt',
+      bloodPressure: 'id, date, createdAt',
+      nutrition: 'id, date, mealType, createdAt, [date+mealType]',
+      cachedProducts: 'barcode, name, cachedAt',
+      pollenAllergenScores: 'taxon, name, updatedAt',
+    });
   }
 }
 

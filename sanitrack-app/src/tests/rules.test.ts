@@ -49,19 +49,19 @@ describe('evaluateField - cholesterol (tc)', () => {
   it('returns Normal for desirable cholesterol', () => {
     const result = evaluateField('tc', 4.5);
     expect(result.zone).toBe(HealthZone.Normal);
-    expect(result.label).toBe('Desirable');
+    expect(result.label).toBe('Désirable');
   });
 
   it('returns Borderline for borderline high cholesterol', () => {
     const result = evaluateField('tc', 5.5);
     expect(result.zone).toBe(HealthZone.Borderline);
-    expect(result.label).toBe('Borderline high');
+    expect(result.label).toBe('Limite élevé');
   });
 
   it('returns Elevated for high cholesterol', () => {
     const result = evaluateField('tc', 6.5);
     expect(result.zone).toBe(HealthZone.Elevated);
-    expect(result.label).toBe('High');
+    expect(result.label).toBe('Élevé');
   });
 
   it('returns Normal at exact boundary 5.2', () => {
@@ -90,13 +90,13 @@ describe('evaluateField - HDL', () => {
   it('returns Borderline for low HDL', () => {
     const result = evaluateField('hdl', 1.2);
     expect(result.zone).toBe(HealthZone.Borderline);
-    expect(result.label).toBe('Low');
+    expect(result.label).toBe('Bas');
   });
 
   it('returns Elevated for very low HDL', () => {
     const result = evaluateField('hdl', 0.7);
     expect(result.zone).toBe(HealthZone.Elevated);
-    expect(result.label).toBe('Very low');
+    expect(result.label).toBe('Très bas');
   });
 
   it('returns Borderline at exact boundary 1.0', () => {
@@ -205,7 +205,7 @@ describe('evaluateField - BMI', () => {
   it('returns Elevated for underweight BMI', () => {
     const result = evaluateField('bmi', 17);
     expect(result.zone).toBe(HealthZone.Elevated);
-    expect(result.label).toBe('Underweight');
+    expect(result.label).toBe('Insuffisance pondérale');
   });
 
   it('returns Normal for normal BMI', () => {
@@ -394,7 +394,7 @@ describe('evaluateField - unknown field', () => {
   it('returns unknown result for invalid field', () => {
     const result = evaluateField('unknownField', 5.0);
     expect(result.zone).toBe(HealthZone.Normal);
-    expect(result.label).toBe('Unknown');
+    expect(result.label).toBe('Inconnu');
   });
 });
 

@@ -17,34 +17,28 @@ interface SleepFormProps {
 
 const sleepTimeSchema = z.object({
   date: z.string().min(1, 'La date est requise'),
-  totalSleepH: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(24),
-  totalSleepM: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(59),
-  deepSleepH: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(24),
-  deepSleepM: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(59),
-  lightSleepH: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(24),
-  lightSleepM: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(59),
-  remSleepH: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(24),
-  remSleepM: z.number({ required_error: 'Requis' }).min(0, 'Doit être positif').max(59),
+  bedTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Le format doit être hh:mm').or(z.literal('')).optional(),
+  wakeTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Le format doit être hh:mm').or(z.literal('')).optional(),
+  totalSleepTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Le format doit être hh:mm').or(z.literal('')).optional(),
+  deepSleepTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Le format doit être hh:mm').or(z.literal('')).optional(),
+  lightSleepTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Le format doit être hh:mm').or(z.literal('')).optional(),
+  remSleepTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Le format doit être hh:mm').or(z.literal('')).optional(),
   efficiency: z.union([z.number().min(0, "L'efficacité doit être non négative").max(100, "L'efficacité ne peut pas dépasser 100%"), z.nan()]).optional(),
 });
 
 type SchemaInput = z.infer<typeof sleepTimeSchema>;
 
-function minutesToHm(totalMinutes: number): { h: number; m: number } {
-  if (totalMinutes <= 0) return { h: 0, m: 0 };
-  return { h: Math.floor(totalMinutes / 60), m: totalMinutes % 60 };
+function minutesToTimeValue(totalMinutes: number): string {
+  if (totalMinutes <= 0) return '';
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
-function hmToMinutes(h: number, m: number): number {
-  return (h || 0) * 60 + (m || 0);
-}
-
-function formatMinutes(mins: number): string {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  if (h > 0 && m > 0) return `${h}h ${m}m`;
-  if (h > 0) return `${h}h`;
-  return `${m}m`;
+function timeToMinutes(time: string | undefined): number {
+  if (!time) return 0;
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
 }
 
 function toISODate(dateStr: string): string {
@@ -60,11 +54,6 @@ function toDateInputValue(dateStr: string | undefined): string {
 }
 
 export function SleepForm({ initialData, onSubmit, onCancel, loading = false }: SleepFormProps) {
-  const totalInit = minutesToHm(initialData?.totalSleep ?? 0);
-  const deepInit = minutesToHm(initialData?.deepSleep ?? 0);
-  const lightInit = minutesToHm(initialData?.lightSleep ?? 0);
-  const remInit = minutesToHm(initialData?.remSleep ?? 0);
-
   const {
     register,
     handleSubmit,
@@ -74,31 +63,20 @@ export function SleepForm({ initialData, onSubmit, onCancel, loading = false }: 
     resolver: zodResolver(sleepTimeSchema),
     defaultValues: {
       date: toDateInputValue(initialData?.date),
-      totalSleepH: totalInit.h,
-      totalSleepM: totalInit.m,
-      deepSleepH: deepInit.h,
-      deepSleepM: deepInit.m,
-      lightSleepH: lightInit.h,
-      lightSleepM: lightInit.m,
-      remSleepH: remInit.h,
-      remSleepM: remInit.m,
+      bedTime: initialData?.bedTime ?? '',
+      wakeTime: initialData?.wakeTime ?? '',
+      totalSleepTime: minutesToTimeValue(initialData?.totalSleep ?? 0),
+      deepSleepTime: minutesToTimeValue(initialData?.deepSleep ?? 0),
+      lightSleepTime: minutesToTimeValue(initialData?.lightSleep ?? 0),
+      remSleepTime: minutesToTimeValue(initialData?.remSleep ?? 0),
       efficiency: initialData?.efficiency ?? undefined,
     },
   });
 
-  const totalH = watch('totalSleepH') || 0;
-  const totalM = watch('totalSleepM') || 0;
-  const deepH = watch('deepSleepH') || 0;
-  const deepM = watch('deepSleepM') || 0;
-  const lightH = watch('lightSleepH') || 0;
-  const lightM = watch('lightSleepM') || 0;
-  const remH = watch('remSleepH') || 0;
-  const remM = watch('remSleepM') || 0;
-
-  const totalMinutes = hmToMinutes(totalH, totalM);
-  const deepMinutes = hmToMinutes(deepH, deepM);
-  const lightMinutes = hmToMinutes(lightH, lightM);
-  const remMinutes = hmToMinutes(remH, remM);
+  const totalMinutes = timeToMinutes(watch('totalSleepTime'));
+  const deepMinutes = timeToMinutes(watch('deepSleepTime'));
+  const lightMinutes = timeToMinutes(watch('lightSleepTime'));
+  const remMinutes = timeToMinutes(watch('remSleepTime'));
 
   const percentages = useMemo(() => {
     if (totalMinutes <= 0) return { deep: 0, light: 0, rem: 0 };
@@ -113,19 +91,15 @@ export function SleepForm({ initialData, onSubmit, onCancel, loading = false }: 
     const effValue = typeof data.efficiency === 'number' && !isNaN(data.efficiency) ? data.efficiency : undefined;
     onSubmit({
       date: toISODate(data.date),
-      totalSleep: hmToMinutes(data.totalSleepH, data.totalSleepM),
-      deepSleep: hmToMinutes(data.deepSleepH, data.deepSleepM),
-      lightSleep: hmToMinutes(data.lightSleepH, data.lightSleepM),
-      remSleep: hmToMinutes(data.remSleepH, data.remSleepM),
+      bedTime: data.bedTime || undefined,
+      wakeTime: data.wakeTime || undefined,
+      totalSleep: timeToMinutes(data.totalSleepTime),
+      deepSleep: timeToMinutes(data.deepSleepTime),
+      lightSleep: timeToMinutes(data.lightSleepTime),
+      remSleep: timeToMinutes(data.remSleepTime),
       efficiency: effValue,
     });
   };
-
-  const numProps = (field: keyof SchemaInput) => ({
-    type: 'number' as const,
-    min: 0,
-    ...register(field, { valueAsNumber: true }),
-  });
 
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -148,93 +122,47 @@ export function SleepForm({ initialData, onSubmit, onCancel, loading = false }: 
           {...register('efficiency', { valueAsNumber: true })}
         />
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Sommeil total {totalMinutes > 0 ? `(${formatMinutes(totalMinutes)})` : ''}
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              className="w-20 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-              placeholder="h"
-              {...numProps('totalSleepH')}
-            />
-            <span className="text-sm text-slate-500 dark:text-slate-400">h</span>
-            <input
-              className="w-20 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-              placeholder="min"
-              {...numProps('totalSleepM')}
-            />
-            <span className="text-sm text-slate-500 dark:text-slate-400">min</span>
-          </div>
-          {errors.totalSleepH && <p className="text-xs text-red-600 dark:text-red-400">{errors.totalSleepH.message}</p>}
-          {errors.totalSleepM && <p className="text-xs text-red-600 dark:text-red-400">{errors.totalSleepM.message}</p>}
-        </div>
+        <Input
+          label="Heure de coucher"
+          type="time"
+          error={errors.bedTime?.message}
+          {...register('bedTime')}
+        />
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Sommeil profond {deepMinutes > 0 ? `(${formatMinutes(deepMinutes)})` : ''}
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              className="w-20 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-              placeholder="h"
-              {...numProps('deepSleepH')}
-            />
-            <span className="text-sm text-slate-500 dark:text-slate-400">h</span>
-            <input
-              className="w-20 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-              placeholder="min"
-              {...numProps('deepSleepM')}
-            />
-            <span className="text-sm text-slate-500 dark:text-slate-400">min</span>
-          </div>
-          {errors.deepSleepH && <p className="text-xs text-red-600 dark:text-red-400">{errors.deepSleepH.message}</p>}
-          {errors.deepSleepM && <p className="text-xs text-red-600 dark:text-red-400">{errors.deepSleepM.message}</p>}
-        </div>
+        <Input
+          label="Heure de lever"
+          type="time"
+          error={errors.wakeTime?.message}
+          {...register('wakeTime')}
+        />
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Sommeil léger {lightMinutes > 0 ? `(${formatMinutes(lightMinutes)})` : ''}
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              className="w-20 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-              placeholder="h"
-              {...numProps('lightSleepH')}
-            />
-            <span className="text-sm text-slate-500 dark:text-slate-400">h</span>
-            <input
-              className="w-20 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-              placeholder="min"
-              {...numProps('lightSleepM')}
-            />
-            <span className="text-sm text-slate-500 dark:text-slate-400">min</span>
-          </div>
-          {errors.lightSleepH && <p className="text-xs text-red-600 dark:text-red-400">{errors.lightSleepH.message}</p>}
-          {errors.lightSleepM && <p className="text-xs text-red-600 dark:text-red-400">{errors.lightSleepM.message}</p>}
-        </div>
+        <Input
+          label={`Sommeil total${totalMinutes > 0 ? ` (${totalMinutes} min)` : ''}`}
+          type="time"
+          error={errors.totalSleepTime?.message}
+          {...register('totalSleepTime')}
+        />
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-            Sommeil paradoxal {remMinutes > 0 ? `(${formatMinutes(remMinutes)})` : ''}
-          </label>
-          <div className="flex items-center gap-2">
-            <input
-              className="w-20 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-              placeholder="h"
-              {...numProps('remSleepH')}
-            />
-            <span className="text-sm text-slate-500 dark:text-slate-400">h</span>
-            <input
-              className="w-20 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-              placeholder="min"
-              {...numProps('remSleepM')}
-            />
-            <span className="text-sm text-slate-500 dark:text-slate-400">min</span>
-          </div>
-          {errors.remSleepH && <p className="text-xs text-red-600 dark:text-red-400">{errors.remSleepH.message}</p>}
-          {errors.remSleepM && <p className="text-xs text-red-600 dark:text-red-400">{errors.remSleepM.message}</p>}
-        </div>
+        <Input
+          label={`Sommeil profond${deepMinutes > 0 ? ` (${deepMinutes} min)` : ''}`}
+          type="time"
+          error={errors.deepSleepTime?.message}
+          {...register('deepSleepTime')}
+        />
+
+        <Input
+          label={`Sommeil léger${lightMinutes > 0 ? ` (${lightMinutes} min)` : ''}`}
+          type="time"
+          error={errors.lightSleepTime?.message}
+          {...register('lightSleepTime')}
+        />
+
+        <Input
+          label={`Sommeil paradoxal${remMinutes > 0 ? ` (${remMinutes} min)` : ''}`}
+          type="time"
+          error={errors.remSleepTime?.message}
+          {...register('remSleepTime')}
+        />
       </div>
 
       {totalMinutes > 0 && (

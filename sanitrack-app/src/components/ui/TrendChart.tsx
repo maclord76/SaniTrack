@@ -34,6 +34,8 @@ interface TrendChartProps {
   showRegression?: boolean;
   referenceLines?: ReferenceLineConfig[];
   series?: ChartSeries[];
+  valueFormatter?: (value: number) => string;
+  yTickFormatter?: (value: number) => string;
 }
 
 function formatTick(ts: number): string {
@@ -85,11 +87,13 @@ function CustomTooltip({
   payload,
   label: tooltipLabel,
   unit,
+  valueFormatter,
 }: {
   active?: boolean;
   payload?: { value: number; name: string }[];
   label?: string | number;
   unit?: string;
+  valueFormatter?: (value: number) => string;
 }) {
   if (!active || !payload?.length) return null;
 
@@ -102,8 +106,12 @@ function CustomTooltip({
       <p className="mb-1 text-xs text-slate-500 dark:text-slate-400">{dateLabel}</p>
       {payload.map((entry, idx) => (
         <p key={idx} className="text-sm font-medium text-slate-900 dark:text-slate-100">
-          {entry.name}: {typeof entry.value === 'number' ? entry.value.toFixed ? entry.value.toFixed(2).replace(/\.?0+$/, '') : entry.value : entry.value}
-          {unit && <span className="ml-0.5 text-xs">{unit}</span>}
+          {entry.name}: {typeof entry.value === 'number' && valueFormatter
+            ? valueFormatter(entry.value)
+            : typeof entry.value === 'number'
+              ? entry.value.toFixed ? entry.value.toFixed(2).replace(/\.?0+$/, '') : entry.value
+              : entry.value}
+          {unit && !valueFormatter && <span className="ml-0.5 text-xs">{unit}</span>}
         </p>
       ))}
     </div>
@@ -121,6 +129,8 @@ function TrendChart({
   showRegression = false,
   referenceLines,
   series,
+  valueFormatter,
+  yTickFormatter,
 }: TrendChartProps) {
   if (data.length === 0) {
     return (
@@ -179,13 +189,14 @@ function TrendChart({
             className="dark:stroke-slate-600 [&_.recharts-text]:fill-slate-500 dark:[&_.recharts-text]:fill-slate-400"
           />
           <YAxis
+            tickFormatter={yTickFormatter}
             tick={{ fontSize: 12 }}
             tickLine={false}
             axisLine={{ stroke: '#e2e8f0' }}
             className="dark:stroke-slate-600 [&_.recharts-text]:fill-slate-500 dark:[&_.recharts-text]:fill-slate-400"
           />
           <Tooltip
-            content={<CustomTooltip unit={unit} />}
+            content={<CustomTooltip unit={unit} valueFormatter={valueFormatter} />}
           />
           {referenceLines?.map((ref, idx) => (
             <ReferenceLine

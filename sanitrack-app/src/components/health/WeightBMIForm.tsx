@@ -53,7 +53,7 @@ export function WeightBMIForm({ initialData, onSubmit, onCancel, loading = false
     resolver: zodResolver(weightBMIFormSchema),
     defaultValues: {
       date: toDateInputValue(initialData?.date),
-      mass: initialData?.mass ?? 0,
+      mass: initialData?.mass || undefined,
       height: initialData?.height ?? defaultHeight,
       bmi: initialData?.bmi ?? 0,
     },
@@ -73,7 +73,7 @@ export function WeightBMIForm({ initialData, onSubmit, onCancel, loading = false
     return getBmiCategory(computedBmi);
   }, [computedBmi]);
 
-  const massRaw = register('mass', { valueAsNumber: true });
+  const massRaw = register('mass', { setValueAs: (value) => value === '' ? undefined : Number(value) });
   const heightRaw = register('height', { valueAsNumber: true });
 
   const handleMassChange = (e: React.ChangeEvent<HTMLInputElement>) => {
