@@ -21,6 +21,7 @@ const navItems: NavItem[] = [
   { label: 'Pression artérielle', path: '/blood-pressure', icon: '💓' },
   { label: 'Nutrition', path: '/nutrition', icon: '🥗' },
   { label: 'Pollens', path: '/pollens', icon: '🌿' },
+  { label: 'Exporter un rapport', path: '/export', icon: '📄' },
   { label: 'Paramètres', path: '/settings', icon: '⚙️' },
 ];
 

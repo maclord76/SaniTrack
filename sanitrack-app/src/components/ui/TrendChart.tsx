@@ -36,6 +36,8 @@ interface TrendChartProps {
   series?: ChartSeries[];
   valueFormatter?: (value: number) => string;
   yTickFormatter?: (value: number) => string;
+  isAnimationActive?: boolean;
+  className?: string;
 }
 
 function formatTick(ts: number): string {
@@ -51,18 +53,25 @@ function MovingAverageLine({
   dataKey,
   xKey,
   color,
+  isAnimationActive,
 }: {
   data: Record<string, unknown>[];
   dataKey: string;
   xKey: string;
   color: string;
+  isAnimationActive: boolean;
 }) {
-  const windowSize = Math.min(5, data.length);
+  const validCount = data.filter((item) => item[dataKey] !== null && Number.isFinite(Number(item[dataKey]))).length;
+  const windowSize = Math.min(5, validCount);
   if (windowSize < 3) return null;
 
   const movingAvgData = data.map((_, idx) => {
-    const start = Math.max(0, idx - windowSize + 1);
-    const slice = data.slice(start, idx + 1);
+    if (data[idx][dataKey] === null || !Number.isFinite(Number(data[idx][dataKey]))) {
+      return { [xKey]: data[idx][xKey], avg: null };
+    }
+    const slice = data.slice(0, idx + 1)
+      .filter((item) => item[dataKey] !== null && Number.isFinite(Number(item[dataKey])))
+      .slice(-windowSize);
     const avg = slice.reduce((sum, d) => sum + Number(d[dataKey]), 0) / slice.length;
     return { [xKey]: data[idx][xKey], avg };
   });
@@ -76,6 +85,7 @@ function MovingAverageLine({
       strokeWidth={1.5}
       dot={false}
       name="Moyenne mob."
+      isAnimationActive={isAnimationActive}
     />
   );
 }
@@ -131,6 +141,8 @@ function TrendChart({
   series,
   valueFormatter,
   yTickFormatter,
+  isAnimationActive = true,
+  className = 'h-64 w-full',
 }: TrendChartProps) {
   if (data.length === 0) {
     return (
@@ -145,17 +157,20 @@ function TrendChart({
 
   const regressionEnabled = showRegression && !series && dataKey;
   const chartData = useMemo(() => {
-    if (!regressionEnabled || data.length < 3) return data;
+    if (!regressionEnabled) return data;
 
-    const n = data.length;
+    const valid = data.flatMap((item, index) => {
+      const raw = item[dataKey as string];
+      return raw !== null && Number.isFinite(Number(raw)) ? [{ index, value: Number(raw) }] : [];
+    });
+    const n = valid.length;
+    if (n < 3) return data;
     let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-    for (let i = 0; i < n; i++) {
-      const y = Number(data[i][dataKey as string]);
-      if (isNaN(y)) return data;
-      sumX += i;
-      sumY += y;
-      sumXY += i * y;
-      sumXX += i * i;
+    for (const point of valid) {
+      sumX += point.index;
+      sumY += point.value;
+      sumXY += point.index * point.value;
+      sumXX += point.index * point.index;
     }
 
     const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
@@ -163,12 +178,12 @@ function TrendChart({
 
     return data.map((d, i) => ({
       ...d,
-      [REGRESSION_KEY]: slope * i + intercept,
+      [REGRESSION_KEY]: d[dataKey as string] === null ? null : slope * i + intercept,
     }));
   }, [data, dataKey, regressionEnabled]);
 
   return (
-    <div className="h-64 w-full">
+    <div className={className}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
           <CartesianGrid
@@ -223,10 +238,11 @@ function TrendChart({
               dot={{ r: 3, fill: s.color ?? '#6366f1' }}
               activeDot={{ r: 5 }}
               name={s.label}
+              isAnimationActive={isAnimationActive}
             />
           ))}
           {showAverage && !series && dataKey && (
-            <MovingAverageLine data={data} dataKey={dataKey} xKey={xKey} color={color} />
+            <MovingAverageLine data={data} dataKey={dataKey} xKey={xKey} color={color} isAnimationActive={isAnimationActive} />
           )}
           {showRegression && !series && dataKey && (
             <Line
@@ -236,6 +252,7 @@ function TrendChart({
               strokeWidth={1.5}
               dot={false}
               name="Régression"
+              isAnimationActive={isAnimationActive}
             />
           )}
         </LineChart>

@@ -11,6 +11,7 @@ import { NutritionPage } from '@/pages/NutritionPage';
 import PollensPage from '@/pages/PollensPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { ImportPage } from '@/pages/ImportPage';
+import { ExportPage } from '@/pages/ExportPage';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             <Route path="pollens" element={<PollensPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="import" element={<ImportPage />} />
+            <Route path="export" element={<ExportPage />} />
           </Route>
         </Routes>
       </HashRouter>

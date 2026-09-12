@@ -54,6 +54,12 @@ const menuItems: MenuItem[] = [
     icon: '🌿',
     description: 'Suivi des allergènes polliniques…',
   },
+  {
+    title: 'Exporter un rapport',
+    path: '/export',
+    icon: '📄',
+    description: 'Choisissez les rubriques et la période, puis téléchargez votre rapport PDF.',
+  },
 ];
 
 const slogans = [
