@@ -46,6 +46,8 @@ export interface WeightBMI {
 export interface Sleep {
   id: string;
   date: string;
+  bedTime?: string;
+  wakeTime?: string;
   totalSleep: number;
   deepSleep: number;
   lightSleep: number;

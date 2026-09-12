@@ -51,6 +51,47 @@ function computeAvgEfficiency(records: Sleep[]): number | null {
   return Math.round(withEff.reduce((s, r) => s + (r.efficiency as number), 0) / withEff.length);
 }
 
+function timeToMinutes(time: string): number | null {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function formatClockMinutes(totalMinutes: number): string {
+  const normalized = ((Math.round(totalMinutes) % 1440) + 1440) % 1440;
+  const h = Math.floor(normalized / 60);
+  const m = normalized % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function normalizeBedTimeForTrend(time: string | undefined): number | null {
+  if (!time) return null;
+  const minutes = timeToMinutes(time);
+  if (minutes === null) return null;
+  return minutes < 720 ? minutes + 1440 : minutes;
+}
+
+function normalizeWakeTimeForTrend(time: string | undefined): number | null {
+  if (!time) return null;
+  return timeToMinutes(time);
+}
+
+function computeAvgTime(records: Sleep[], field: 'bedTime' | 'wakeTime'): string | null {
+  const minutes = records
+    .map((r) => (r[field] ? timeToMinutes(r[field]) : null))
+    .filter((value): value is number => value !== null);
+
+  if (minutes.length === 0) return null;
+
+  const angleFactor = (2 * Math.PI) / 1440;
+  const sin = minutes.reduce((sum, value) => sum + Math.sin(value * angleFactor), 0) / minutes.length;
+  const cos = minutes.reduce((sum, value) => sum + Math.cos(value * angleFactor), 0) / minutes.length;
+  const angle = Math.atan2(sin, cos);
+  const avgMinutes = angle < 0 ? (angle + 2 * Math.PI) / angleFactor : angle / angleFactor;
+
+  return formatClockMinutes(avgMinutes);
+}
+
 export function SleepDetail() {
   const store = useSleepStore();
   const { records, loading, actions } = store;
@@ -97,9 +138,15 @@ export function SleepDetail() {
         deepPct: Math.round((r.deepSleep / total) * 100),
         lightPct: Math.round((r.lightSleep / total) * 100),
         remPct: Math.round((r.remSleep / total) * 100),
+        bedTimeMinutes: normalizeBedTimeForTrend(r.bedTime),
+        wakeTimeMinutes: normalizeWakeTimeForTrend(r.wakeTime),
       };
     });
   }, [filteredRecords]);
+
+  const sleepTimesTrendData = useMemo(() => {
+    return trendData.filter((r) => r.bedTimeMinutes !== null || r.wakeTimeMinutes !== null);
+  }, [trendData]);
 
   const stackedData = useMemo(() => {
     return [...filteredRecords].reverse().map((r) => ({
@@ -220,13 +267,15 @@ export function SleepDetail() {
               const avgDeepSleep = computeAvg(filteredRecords, 'deepSleep');
               const avgRemSleep = computeAvg(filteredRecords, 'remSleep');
               const avgEfficiency = computeAvgEfficiency(filteredRecords);
+              const avgBedTime = computeAvgTime(filteredRecords, 'bedTime');
+              const avgWakeTime = computeAvgTime(filteredRecords, 'wakeTime');
               const totalResult = evaluateField('sleepTotal', avgTotalSleep);
               const deepResult = evaluateField('sleepDeep', avgDeepSleep);
               const remResult = evaluateField('sleepRem', avgRemSleep);
               const effResult = avgEfficiency != null ? evaluateField('sleepEfficiency', avgEfficiency) : null;
               return (
                 <>
-                  <div className={`grid grid-cols-1 gap-3 ${effResult ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'}`}>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     <HealthIndicator
                       zone={totalResult.zone}
                       label="Sommeil total (moy.)"
@@ -251,6 +300,22 @@ export function SleepDetail() {
                         label="Efficacité (moy.)"
                         value={`${avgEfficiency}%`}
                         zoneLabel={effResult.label}
+                      />
+                    )}
+                    {avgBedTime && (
+                      <HealthIndicator
+                        zone={totalResult.zone}
+                        label="Coucher (moy.)"
+                        value={avgBedTime}
+                        zoneLabel="Heure moyenne"
+                      />
+                    )}
+                    {avgWakeTime && (
+                      <HealthIndicator
+                        zone={totalResult.zone}
+                        label="Lever (moy.)"
+                        value={avgWakeTime}
+                        zoneLabel="Heure moyenne"
                       />
                     )}
                   </div>
@@ -342,6 +407,19 @@ export function SleepDetail() {
                 <h4 className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">Sommeil paradoxal (%)</h4>
                 <TrendChart data={trendData} dataKey="remPct" xKey="date" color="#f59e0b" label="Sommeil paradoxal" unit="%" showAverage showRegression />
               </div>
+              <div className="md:col-span-2">
+                <h4 className="mb-2 text-sm font-medium text-slate-700 dark:text-slate-300">Heures de coucher et de lever</h4>
+                <TrendChart
+                  data={sleepTimesTrendData}
+                  xKey="date"
+                  valueFormatter={formatClockMinutes}
+                  yTickFormatter={formatClockMinutes}
+                  series={[
+                    { dataKey: 'bedTimeMinutes', color: '#7c3aed', label: 'Coucher' },
+                    { dataKey: 'wakeTimeMinutes', color: '#0891b2', label: 'Lever' },
+                  ]}
+                />
+              </div>
             </div>
           </Card>
 
@@ -375,11 +453,13 @@ export function SleepDetail() {
               )}
             </div>
             <div className="overflow-x-auto -mx-6">
-              <table className="w-full min-w-[800px] text-sm">
+              <table className="w-full min-w-[920px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-slate-700">
                     <th className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400 w-12">Modifier</th>
                     <th className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400">Date</th>
+                    <th className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400">Coucher</th>
+                    <th className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400">Lever</th>
                     <th className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400">Total</th>
                     <th className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400">Profond</th>
                     <th className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-400">Profond %</th>
@@ -409,6 +489,8 @@ export function SleepDetail() {
                         <td className="px-4 py-3 text-center font-medium text-slate-900 dark:text-slate-100 whitespace-nowrap">
                           {formatDate(record.date)}
                         </td>
+                        <td className="px-4 py-3 text-center text-slate-700 dark:text-slate-300">{record.bedTime ?? '-'}</td>
+                        <td className="px-4 py-3 text-center text-slate-700 dark:text-slate-300">{record.wakeTime ?? '-'}</td>
                         <td className="px-4 py-3 text-center text-slate-700 dark:text-slate-300">{formatMinutes(record.totalSleep)}</td>
                         <td className="px-4 py-3 text-center text-indigo-600 dark:text-indigo-400">{formatMinutes(record.deepSleep)}</td>
                         <td className="px-4 py-3 text-center text-indigo-600 dark:text-indigo-400">{deepPct}%</td>

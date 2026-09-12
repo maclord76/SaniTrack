@@ -54,7 +54,7 @@ function toDateInputValue(dateStr: string | undefined): string {
 }
 
 export function PhysicalActivityForm({ initialData, onSubmit, onCancel, loading = false }: PhysicalActivityFormProps) {
-  const initialDuration = initialData?.duration ?? 0;
+  const initialDuration = initialData?.duration || 0;
   const initialHms = secondsToHms(initialDuration);
 
   const {
@@ -67,17 +67,17 @@ export function PhysicalActivityForm({ initialData, onSubmit, onCancel, loading 
     resolver: zodResolver(physicalActivityFormSchema),
     defaultValues: {
       date: toDateInputValue(initialData?.date),
-      distance: initialData?.distance ?? 0,
-      duration: initialData?.duration ?? 0,
-      totalCalories: initialData?.totalCalories ?? 0,
-      averagePace: initialData?.averagePace ?? 0,
-      averageSpeed: initialData?.averageSpeed ?? 0,
-      averageCadence: initialData?.averageCadence ?? 0,
-      averageStepLength: initialData?.averageStepLength ?? 0,
-      steps: initialData?.steps ?? 0,
-      averageHeartRate: initialData?.averageHeartRate ?? 0,
-      aerobicTrainingStress: initialData?.aerobicTrainingStress ?? 0,
-      anaerobicTrainingStress: initialData?.anaerobicTrainingStress ??0,
+      distance: initialData?.distance || undefined,
+      duration: initialData?.duration || undefined,
+      totalCalories: initialData?.totalCalories || undefined,
+      averagePace: initialData?.averagePace || undefined,
+      averageSpeed: initialData?.averageSpeed || undefined,
+      averageCadence: initialData?.averageCadence || undefined,
+      averageStepLength: initialData?.averageStepLength || undefined,
+      steps: initialData?.steps || undefined,
+      averageHeartRate: initialData?.averageHeartRate || undefined,
+      aerobicTrainingStress: initialData?.aerobicTrainingStress || undefined,
+      anaerobicTrainingStress: initialData?.anaerobicTrainingStress || undefined,
     },
   });
 
@@ -128,13 +128,13 @@ export function PhysicalActivityForm({ initialData, onSubmit, onCancel, loading 
   const numberInputProps = (field: keyof SchemaInput) => ({
     type: 'number' as const,
     step: '0.01',
-    ...register(field, { valueAsNumber: true }),
+    ...register(field, { setValueAs: (value) => value === '' ? undefined : Number(value) }),
   });
 
   const intNumberInputProps = (field: keyof SchemaInput) => ({
     type: 'number' as const,
     step: '1',
-    ...register(field, { valueAsNumber: true }),
+    ...register(field, { setValueAs: (value) => value === '' ? undefined : Number(value) }),
   });
 
   return (
@@ -165,7 +165,7 @@ export function PhysicalActivityForm({ initialData, onSubmit, onCancel, loading 
                 min="0"
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600"
                 placeholder="h"
-                defaultValue={initialHms.hours}
+                defaultValue={initialHms.hours || undefined}
                 onChange={(e) => {
                   const h = Number(e.target.value) || 0;
                   const m = Number((document.getElementById('_dur_min') as HTMLInputElement)?.value) || 0;
@@ -184,7 +184,7 @@ export function PhysicalActivityForm({ initialData, onSubmit, onCancel, loading 
                 max="59"
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600"
                 placeholder="m"
-                defaultValue={initialHms.minutes}
+                defaultValue={initialHms.minutes || undefined}
                 onChange={(e) => {
                   const h = Number((document.getElementById('_dur_hour') as HTMLInputElement)?.value) || 0;
                   const m = Number(e.target.value) || 0;
@@ -203,7 +203,7 @@ export function PhysicalActivityForm({ initialData, onSubmit, onCancel, loading 
                 max="59"
                 className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600"
                 placeholder="s"
-                defaultValue={initialHms.seconds}
+                defaultValue={initialHms.seconds || undefined}
                 onChange={(e) => {
                   const h = Number((document.getElementById('_dur_hour') as HTMLInputElement)?.value) || 0;
                   const m = Number((document.getElementById('_dur_min') as HTMLInputElement)?.value) || 0;

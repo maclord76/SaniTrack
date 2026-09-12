@@ -9,15 +9,22 @@ L'application fonctionne principalement cote navigateur : les donnees sont stock
 - Tableau de bord de synthese
 - Suivi du poids, de la taille et calcul de l'IMC
 - Suivi de la pression arterielle
-- Suivi des analyses sanguines
+- Suivi des analyses sanguines avec saisie et affichage en mmol/L ou mg/dL (stockage normalisé en mmol/L)
 - Suivi du sommeil
 - Suivi de l'activite physique
 - Journal nutritionnel
 - Recherche alimentaire via Open Food Facts et donnees CIQUAL
 - Consultation des indices polliniques
 - Graphiques et tendances par periode
+- Export de rapports PDF configurables : choix des rubriques et de la periode, indicateurs de periode et graphiques de tendance
 - Import et export des donnees en JSON
 - Stockage local dans le navigateur
+
+## Exporter un rapport PDF
+
+Depuis le tableau de bord ou le menu lateral, ouvrez **Exporter un rapport**. Vous pouvez selectionner les rubriques de sante a inclure et choisir une periode predefinie ou personnalisee.
+
+Le rapport est genere localement au format PDF A4 paysage. Il contient les indicateurs de la periode et les graphiques de tendance correspondants, sans tableau de donnees brutes. Les mises en page sont adaptees aux graphiques importants, notamment le poids, les heures de coucher et de lever, ainsi que la pression arterielle.
 
 ## Objectif
 
@@ -34,6 +41,7 @@ Sanitrack a pour objectif d'aider l'utilisateur a suivre ses indicateurs de sant
 - React Hook Form
 - Zod
 - Recharts
+- jsPDF et html-to-image pour la generation des rapports PDF
 - Vitest
 
 ## Structure du depot

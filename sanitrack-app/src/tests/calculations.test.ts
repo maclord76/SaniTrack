@@ -25,61 +25,61 @@ describe('calculateBMI', () => {
   });
 
   it('throws error for zero height', () => {
-    expect(() => calculateBMI(70, 0)).toThrow('Height must be greater than zero');
+    expect(() => calculateBMI(70, 0)).toThrow('La taille doit être supérieure à zéro');
   });
 
   it('throws error for negative height', () => {
-    expect(() => calculateBMI(70, -10)).toThrow('Height must be greater than zero');
+    expect(() => calculateBMI(70, -10)).toThrow('La taille doit être supérieure à zéro');
   });
 });
 
 describe('getBMICategory', () => {
   it('returns Underweight for BMI < 18.5', () => {
-    expect(getBMICategory(17)).toBe('Underweight');
+    expect(getBMICategory(17)).toBe('Insuffisance pondérale');
   });
 
   it('returns Underweight at BMI 18.4', () => {
-    expect(getBMICategory(18.4)).toBe('Underweight');
+    expect(getBMICategory(18.4)).toBe('Insuffisance pondérale');
   });
 
   it('returns Normal weight for BMI 18.5', () => {
-    expect(getBMICategory(18.5)).toBe('Normal weight');
+    expect(getBMICategory(18.5)).toBe('Corpulence normale');
   });
 
   it('returns Normal weight for BMI 24.9', () => {
-    expect(getBMICategory(24.9)).toBe('Normal weight');
+    expect(getBMICategory(24.9)).toBe('Corpulence normale');
   });
 
   it('returns Overweight for BMI 25', () => {
-    expect(getBMICategory(25)).toBe('Overweight');
+    expect(getBMICategory(25)).toBe('Surpoids');
   });
 
   it('returns Overweight for BMI 29.9', () => {
-    expect(getBMICategory(29.9)).toBe('Overweight');
+    expect(getBMICategory(29.9)).toBe('Surpoids');
   });
 
   it('returns Obese class I for BMI 30', () => {
-    expect(getBMICategory(30)).toBe('Obese class I');
+    expect(getBMICategory(30)).toBe('Obésité classe I');
   });
 
   it('returns Obese class I for BMI 34.9', () => {
-    expect(getBMICategory(34.9)).toBe('Obese class I');
+    expect(getBMICategory(34.9)).toBe('Obésité classe I');
   });
 
   it('returns Obese class II for BMI 35', () => {
-    expect(getBMICategory(35)).toBe('Obese class II');
+    expect(getBMICategory(35)).toBe('Obésité classe II');
   });
 
   it('returns Obese class II for BMI 39.9', () => {
-    expect(getBMICategory(39.9)).toBe('Obese class II');
+    expect(getBMICategory(39.9)).toBe('Obésité classe II');
   });
 
   it('returns Obese class III for BMI 40', () => {
-    expect(getBMICategory(40)).toBe('Obese class III');
+    expect(getBMICategory(40)).toBe('Obésité classe III');
   });
 
   it('returns Obese class III for BMI 50', () => {
-    expect(getBMICategory(50)).toBe('Obese class III');
+    expect(getBMICategory(50)).toBe('Obésité classe III');
   });
 });
 
@@ -98,11 +98,11 @@ describe('calculateAveragePace', () => {
   });
 
   it('throws error for zero distance', () => {
-    expect(() => calculateAveragePace(0, 3600)).toThrow('Distance must be greater than zero');
+    expect(() => calculateAveragePace(0, 3600)).toThrow('La distance doit être supérieure à zéro');
   });
 
   it('throws error for negative distance', () => {
-    expect(() => calculateAveragePace(-5, 3600)).toThrow('Distance must be greater than zero');
+    expect(() => calculateAveragePace(-5, 3600)).toThrow('La distance doit être supérieure à zéro');
   });
 });
 
@@ -116,11 +116,11 @@ describe('calculateAverageSpeed', () => {
   });
 
   it('throws error for zero duration', () => {
-    expect(() => calculateAverageSpeed(10, 0)).toThrow('Duration must be greater than zero');
+    expect(() => calculateAverageSpeed(10, 0)).toThrow('La durée doit être supérieure à zéro');
   });
 
   it('throws error for negative duration', () => {
-    expect(() => calculateAverageSpeed(10, -100)).toThrow('Duration must be greater than zero');
+    expect(() => calculateAverageSpeed(10, -100)).toThrow('La durée doit être supérieure à zéro');
   });
 });
 
@@ -270,11 +270,11 @@ describe('calculateMovingAverage', () => {
   });
 
   it('throws error for zero window', () => {
-    expect(() => calculateMovingAverage([1, 2, 3], 0)).toThrow('Window must be greater than zero');
+    expect(() => calculateMovingAverage([1, 2, 3], 0)).toThrow('La fenêtre doit être supérieure à zéro');
   });
 
   it('throws error for negative window', () => {
-    expect(() => calculateMovingAverage([1, 2, 3], -1)).toThrow('Window must be greater than zero');
+    expect(() => calculateMovingAverage([1, 2, 3], -1)).toThrow('La fenêtre doit être supérieure à zéro');
   });
 
   it('calculates moving average with window 1', () => {

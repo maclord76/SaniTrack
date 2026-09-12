@@ -79,6 +79,16 @@ const defaultFood: FoodInput = {
   fibers: 0,
 };
 
+const emptyFood = {
+  ...defaultFood,
+  quantity: undefined,
+  calories: undefined,
+  proteins: undefined,
+  lipids: undefined,
+  carbs: undefined,
+  fibers: undefined,
+} as unknown as FoodInput;
+
 function toISODate(dateStr: string): string {
   if (!dateStr) return new Date().toISOString();
   const d = new Date(dateStr + 'T00:00:00');
@@ -138,17 +148,19 @@ export function NutritionForm({ initialData, onSubmit, onCancel, loading = false
     defaultValues: {
       date: toDateInputValue(initialData?.date),
       mealType: initialData?.mealType ?? 'breakfast',
-      foods: (initialData?.foods?.length ? initialData.foods : [{ ...defaultFood }]).map((food) => {
-        const qty = food.quantity || 100;
-        return {
-          ...food,
-          calories: calculatePerHundred(food.calories || 0, qty),
-          proteins: calculatePerHundred(food.proteins || 0, qty),
-          lipids: calculatePerHundred(food.lipids || 0, qty),
-          carbs: calculatePerHundred(food.carbs || 0, qty),
-          fibers: calculatePerHundred(food.fibers || 0, qty),
-        };
-      }),
+      foods: initialData?.foods?.length
+        ? initialData.foods.map((food) => {
+          const qty = food.quantity || 100;
+          return {
+            ...food,
+            calories: calculatePerHundred(food.calories || 0, qty),
+            proteins: calculatePerHundred(food.proteins || 0, qty),
+            lipids: calculatePerHundred(food.lipids || 0, qty),
+            carbs: calculatePerHundred(food.carbs || 0, qty),
+            fibers: calculatePerHundred(food.fibers || 0, qty),
+          };
+        })
+        : [{ ...emptyFood }],
       totalCalories: initialData?.totalCalories ?? 0,
       totalProteins: initialData?.totalProteins ?? 0,
       totalLipids: initialData?.totalLipids ?? 0,
@@ -325,7 +337,7 @@ export function NutritionForm({ initialData, onSubmit, onCancel, loading = false
   };
 
   const handleAddFood = () => {
-    append({ ...defaultFood });
+    append({ ...emptyFood });
     setFoodStates((prev) => [...prev, { inputMode: 'manuelle', perHundred: null }]);
   };
 
@@ -679,7 +691,7 @@ export function NutritionForm({ initialData, onSubmit, onCancel, loading = false
                     step="0.01"
                     min="0"
                     error={fieldErrors?.quantity}
-                    {...register(`foods.${index}.quantity`, { valueAsNumber: true })}
+                    {...register(`foods.${index}.quantity`, { setValueAs: (value) => value === '' ? undefined : Number(value) })}
                     onBlur={updateTotals}
                   />
                   <Select
@@ -706,7 +718,7 @@ export function NutritionForm({ initialData, onSubmit, onCancel, loading = false
                         step="0.01"
                         min="0"
                         error={fieldErrors?.calories}
-                        {...register(`foods.${index}.calories`, { valueAsNumber: true })}
+                        {...register(`foods.${index}.calories`, { setValueAs: (value) => value === '' ? undefined : Number(value) })}
                         disabled={isLocked}
                         className="text-center"
                         onBlur={updateTotals}
@@ -723,7 +735,7 @@ export function NutritionForm({ initialData, onSubmit, onCancel, loading = false
                         step="0.01"
                         min="0"
                         error={fieldErrors?.proteins}
-                        {...register(`foods.${index}.proteins`, { valueAsNumber: true })}
+                        {...register(`foods.${index}.proteins`, { setValueAs: (value) => value === '' ? undefined : Number(value) })}
                         disabled={isLocked}
                         className="text-center"
                         onBlur={updateTotals}
@@ -740,7 +752,7 @@ export function NutritionForm({ initialData, onSubmit, onCancel, loading = false
                         step="0.01"
                         min="0"
                         error={fieldErrors?.lipids}
-                        {...register(`foods.${index}.lipids`, { valueAsNumber: true })}
+                        {...register(`foods.${index}.lipids`, { setValueAs: (value) => value === '' ? undefined : Number(value) })}
                         disabled={isLocked}
                         className="text-center"
                         onBlur={updateTotals}
@@ -757,7 +769,7 @@ export function NutritionForm({ initialData, onSubmit, onCancel, loading = false
                         step="0.01"
                         min="0"
                         error={fieldErrors?.carbs}
-                        {...register(`foods.${index}.carbs`, { valueAsNumber: true })}
+                        {...register(`foods.${index}.carbs`, { setValueAs: (value) => value === '' ? undefined : Number(value) })}
                         disabled={isLocked}
                         className="text-center"
                         onBlur={updateTotals}
@@ -774,7 +786,7 @@ export function NutritionForm({ initialData, onSubmit, onCancel, loading = false
                         step="0.01"
                         min="0"
                         error={fieldErrors?.fibers}
-                        {...register(`foods.${index}.fibers`, { valueAsNumber: true })}
+                        {...register(`foods.${index}.fibers`, { setValueAs: (value) => value === '' ? undefined : Number(value) })}
                         disabled={isLocked}
                         className="text-center"
                         onBlur={updateTotals}

@@ -56,6 +56,9 @@ export interface PollenResponse {
   success: boolean;
   features_count?: number;
   available_dates?: string[];
+  requested_date?: string;
+  fallback_used?: boolean;
+  is_stale?: boolean;
   today: PollenDayData;
   tomorrow: PollenDayData;
   afterTomorrow?: PollenDayData;

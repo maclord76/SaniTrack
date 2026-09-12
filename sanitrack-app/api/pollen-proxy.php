@@ -239,15 +239,16 @@ function getToken(string $username, string $password): string {
     file_put_contents($cacheFile, json_encode(['token' => $token, 'expires_at' => time() + 23*60*60]));
     return $token;
 }
-function fetchPollenData(string $token, ?string $codeZone = null, ?string $date = null): array {
+function fetchPollenData(string $token, ?string $codeZone = null, ?string $date = null, int $lookbackDays = 0): array {
     $baseDate = new DateTime($date ?: date('Y-m-d'));
+    $startDate = (clone $baseDate)->modify('-' . max(0, $lookbackDays) . ' day')->format('Y-m-d');
     $endDate = (clone $baseDate)->modify('+2 day')->format('Y-m-d');
 
     $params = http_build_query(array_filter([
         'format' => 'geojson',
         'code_zone' => $codeZone,
         'date' => $endDate,
-        'date_historique' => $baseDate->format('Y-m-d'),
+        'date_historique' => $startDate,
         'with_geom' => 'false',
     ]));
     
@@ -423,6 +424,7 @@ function extractTaxonData(array $props): array {
             }
         }
         sort($availableDates);
+        $availableDates = array_slice($availableDates, -3);
 
         $todayDate = $availableDates[0] ?? $fallbackDate ?? date('Y-m-d');
         $tomorrowDate = $availableDates[1] ?? null;
@@ -436,7 +438,7 @@ function extractTaxonData(array $props): array {
             'afterTomorrow' => $afterTomorrowDate
                 ? extractPollenDataFromFeatures($features, $afterTomorrowDate, $lat, $lon)
                 : ['pollen' => [], 'zone' => null],
-            'available_dates' => array_slice($availableDates, 0, 3),
+            'available_dates' => $availableDates,
         ];
     }
 
@@ -825,12 +827,25 @@ try {
             $token = getToken($login, $password);
         }
         $data = fetchPollenData($token, $codeZone, $date);
+        $fallbackUsed = false;
+        if (empty($data['features'])) {
+            // La publication Atmo peut avoir quelques jours de retard. Dans ce cas,
+            // récupérer le dernier bulletin disponible au lieu d'afficher une page vide.
+            $data = fetchPollenData($token, $codeZone, $date, 7);
+            $fallbackUsed = !empty($data['features']);
+        }
         $days = extractPollenDays($data['features'] ?? [], $date, $lat, $lon);
+        $requestedDate = $date ?: date('Y-m-d');
+        $availableDates = $days['available_dates'];
+        $latestAvailableDate = !empty($availableDates) ? end($availableDates) : null;
         
         echo json_encode([
             'success' => true,
             'features_count' => count($data['features'] ?? []),
-            'available_dates' => $days['available_dates'],
+            'available_dates' => $availableDates,
+            'requested_date' => $requestedDate,
+            'fallback_used' => $fallbackUsed,
+            'is_stale' => $latestAvailableDate !== null && $latestAvailableDate < $requestedDate,
             'today' => $days['today'],
             'tomorrow' => $days['tomorrow'],
             'afterTomorrow' => $days['afterTomorrow'],
